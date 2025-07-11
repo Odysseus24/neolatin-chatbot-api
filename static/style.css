@@ -1,0 +1,56 @@
+/* Renaissance-inspired theme */
+body {
+    background-color: #fdf6e3; /* Parchment color */
+    color: #586e75; /* A soft, dark color for text */
+    font-family: 'Garamond', 'Times New Roman', serif;
+}
+
+.renaissance-header {
+    background-color: #eee8d5; /* A slightly darker parchment */
+    border-bottom: 2px solid #93a1a1;
+}
+
+h1 {
+    font-family: 'Trajan Pro', 'Cinzel', serif; /* A more classic, monumental font */
+    color: #859900;
+}
+
+#chat-window {
+    border: 1px solid #93a1a1;
+    background-color: #fff;
+}
+
+.message {
+    margin-bottom: 1rem;
+}
+
+.user-message {
+    text-align: right;
+}
+
+.user-message .message-bubble {
+    background-color: #268bd2;
+    color: white;
+    border-radius: 15px 15px 0 15px;
+    padding: 10px 15px;
+    display: inline-block;
+}
+
+.bot-message .message-bubble {
+    background-color: #eee8d5;
+    border-radius: 15px 15px 15px 0;
+    padding: 10px 15px;
+    display: inline-block;
+}
+
+.drop-zone {
+    border: 2px dashed #93a1a1;
+    border-radius: 5px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.drop-zone.dragover {
+    background-color: #eee8d5;
+}

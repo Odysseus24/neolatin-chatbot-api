@@ -1,0 +1,14 @@
+langchain
+langchain-community
+langchain-core
+langchain-google-genai
+chromadb
+flask
+google-generativeai
+pypdf
+pdf2image
+pytesseract
+pillow
+python-dotenv
+sentence-transformers
+PyMuPDF
