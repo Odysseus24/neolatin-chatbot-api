@@ -21,11 +21,39 @@ h1 {
 }
 
 .message {
+    display: flex;
+    align-items: flex-start;
     margin-bottom: 1rem;
 }
 
+.message-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+.user-message .message-avatar {
+    background-color: #268bd2;
+    color: white;
+}
+
+.bot-message .message-avatar {
+    background-color: #859900;
+    color: white;
+}
+
 .user-message {
-    text-align: right;
+    flex-direction: row-reverse;
+}
+
+.user-message .message-avatar {
+    margin-left: 10px;
+    margin-right: 0;
 }
 
 .user-message .message-bubble {

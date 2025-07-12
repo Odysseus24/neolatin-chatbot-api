@@ -11,10 +11,19 @@
     <div class="container-fluid d-flex flex-column vh-100">
         <header class="text-center py-3 renaissance-header">
             <h1>Jozef</h1>
-            <p class="lead">Your guide to Neo-Latin Studies</p>
+            <p class="lead">Your guide to the Neo-Latin World</p>
+            <p class="text-muted"></p>
+                I have knowledge of Neo-Latin handbooks, companions and encyclopaedias. 
+                If you want to ask questions about your own documents, I recommend <a href="https://notebooklm.google" target="_blank">NotebookLM</a>. 
+                For dictionaries use <a href="http://logeion.uchicago.edu" target="_blank">Logeion</a> and the <a href="http://nlw.renaessancestudier.org" target="_blank">Neulateinische Wortliste</a>.
+            </p>
         </header>
 
         <main class="flex-grow-1 overflow-auto p-3" id="chat-window">
+            <div class="message bot-message" id="initial-message">
+                <div class="message-avatar">J</div>
+                <div class="message-bubble">Salve! How may I assist you today?</div>
+            </div>
             <!-- Chat messages will appear here -->
         </main>
 

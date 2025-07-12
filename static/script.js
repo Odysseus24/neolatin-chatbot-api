@@ -26,9 +26,16 @@ document.addEventListener('DOMContentLoaded', () => {
     function appendMessage(message, sender) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('message', `${sender}-message`);
+
+        const avatar = document.createElement('div');
+        avatar.classList.add('message-avatar');
+        avatar.textContent = sender === 'user' ? 'U' : 'J';
+
         const bubble = document.createElement('div');
         bubble.classList.add('message-bubble');
         bubble.textContent = message;
+
+        messageElement.appendChild(avatar);
         messageElement.appendChild(bubble);
         chatWindow.appendChild(messageElement);
         chatWindow.scrollTop = chatWindow.scrollHeight;
