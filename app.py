@@ -6,8 +6,10 @@ from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_google_genai import ChatGoogleGenerativeAI
 from dotenv import load_dotenv
-import pytesseract
-from PIL import Image
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_core.messages import HumanMessage
+from typing import Dict, Optional
+import base64
 import fitz  # PyMuPDF
 
 load_dotenv()
@@ -29,24 +31,26 @@ llm_gemini_flash = ChatGoogleGenerativeAI(model="gemini-2.5-flash")
 
 # --- App Setup ---
 app = Flask(__name__)
+# This will hold the content of the uploaded file for the user's session.
+# In a real multi-user application, this should be handled by a proper session management system.
+user_file_context: Dict[str, Optional[str]] = {
+    "text": None,
+    "filename": None
+}
 
 # --- RAG Setup ---
 embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
-vectorstore = Chroma(persist_directory=VECTOR_STORE_PATH, embedding_function=embeddings)
-memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+# This is the main, persistent vector store for general knowledge.
+main_vectorstore = Chroma(persist_directory=VECTOR_STORE_PATH, embedding_function=embeddings)
+main_memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True, output_key='answer')
+main_retriever = main_vectorstore.as_retriever(search_kwargs={"k": 5})
 
-retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
-
+# This is the main QA chain that uses the persistent vector store.
 qa_chain_gemini_pro = ConversationalRetrievalChain.from_llm(
     llm=llm_gemini_pro,
-    retriever=retriever,
-    memory=memory
-)
-
-qa_chain_gemini_flash = ConversationalRetrievalChain.from_llm(
-    llm=llm_gemini_flash,
-    retriever=retriever,
-    memory=memory
+    retriever=main_retriever,
+    memory=main_memory,
+    return_source_documents=True
 )
 
 # --- Routes ---
@@ -60,40 +64,103 @@ def ask():
     if not user_message:
         return jsonify({"error": "No message provided"}), 400
 
+    file_text = user_file_context.get("text")
+
     try:
-        response = qa_chain_gemini_pro.invoke({"question": user_message})
+        if file_text:
+            # A file is in context, so we query against it directly.
+            
+            # 1. Create a temporary, in-memory vector store for the file.
+            text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+            chunks = text_splitter.split_text(file_text)
+            if not chunks:
+                return jsonify({"error": "Could not process the file content."}), 500
+
+            file_vectorstore = Chroma.from_texts(chunks, embeddings)
+            file_retriever = file_vectorstore.as_retriever(search_kwargs={"k": 3})
+            
+            # 2. Create a dedicated, isolated memory for this file conversation.
+            file_memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True, output_key='answer')
+
+            # 3. Create a dedicated chain for this file.
+            file_qa_chain = ConversationalRetrievalChain.from_llm(
+                llm=llm_gemini_pro,
+                retriever=file_retriever,
+                memory=file_memory,
+                return_source_documents=True
+            )
+            
+            # 4. Invoke the file-specific chain.
+            response = file_qa_chain.invoke({"question": user_message})
+        else:
+            # No file in context, use the main general-purpose chain.
+            response = qa_chain_gemini_pro.invoke({"question": user_message})
+            
         return jsonify({"answer": response["answer"]})
+
     except Exception as e:
-        # Fallback mechanism
-        try:
-            response = qa_chain_gemini_flash.invoke({"question": user_message})
-            return jsonify({"answer": response["answer"]})
-        except Exception as e2:
-            return jsonify({"error": str(e2)}), 500
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/clear_context", methods=["POST"])
+def clear_context():
+    global user_file_context
+    user_file_context = {"text": None, "filename": None}
+    # Also clear the main conversation memory to avoid context bleed.
+    main_memory.clear()
+    return jsonify({"message": "File context and conversation history cleared."})
 
 @app.route("/upload", methods=["POST"])
 def upload():
+    global user_file_context
     if 'file' not in request.files:
         return jsonify({"error": "No file part"}), 400
     file = request.files['file']
-    if file.filename == '':
+    if not file or not file.filename:
         return jsonify({"error": "No selected file"}), 400
 
     try:
-        if file.filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-            image = Image.open(file.stream)
-            text = pytesseract.image_to_string(image)
-        elif file.filename.lower().endswith('.pdf'):
-            doc = fitz.open(stream=file.read(), filetype="pdf")
-            text = ""
-            for page in doc:
-                text += page.get_text()
-        else:
-            return jsonify({"error": "Unsupported file type"}), 400
+        text = ""
+        filename_lower = file.filename.lower()
 
-        # Now, ask the chatbot about the extracted text
-        response = qa_chain_gemini_pro.invoke({"question": f"Based on the following text, answer any questions: {text[:4000]}"}) # Truncate for context window
-        return jsonify({"answer": response['answer']})
+        if filename_lower.endswith('.pdf'):
+            doc = fitz.open(stream=file.read(), filetype="pdf")
+            for page_num in range(doc.page_count):
+                page = doc[page_num]
+                text += page.get_textpage().extractText()
+            doc.close()
+        elif filename_lower.endswith(('.png', '.jpg', '.jpeg')):
+            image_data = base64.b64encode(file.read()).decode('utf-8')
+            image_message = HumanMessage(
+                content=[
+                    {"type": "text", "text": "Describe this image in detail. This description will be used for a Retrieval-Augmented Generation system, so be comprehensive."},
+                    {"type": "image_url", "image_url": f"data:image/jpeg;base64,{image_data}"},
+                ]
+            )
+            response = llm_gemini_pro.invoke([image_message])
+            text = str(response.content)
+        else:
+            return jsonify({"error": "Unsupported file type. Please upload a PDF or image file (PNG, JPG, JPEG)."}), 400
+
+        if not text:
+            return jsonify({"error": "Could not extract text or description from the file."}), 400
+
+        # Split the text into chunks
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=200,
+            length_function=len
+        )
+        chunks = text_splitter.split_text(text)
+
+        # DO NOT add to the main vector store. Instead, hold it in our session context.
+        if chunks:
+            user_file_context["text"] = text
+            user_file_context["filename"] = file.filename
+            # Clear the main memory to signal a new conversational context.
+            main_memory.clear()
+            return jsonify({"message": f"File '{file.filename}' processed. You can now ask questions about it."})
+        else:
+            return jsonify({"error": "Could not process text into chunks."}), 400
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
