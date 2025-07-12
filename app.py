@@ -67,5 +67,13 @@ def ask():
         except Exception as e2:
             return jsonify({"error": str(e2)}), 500
 
+@app.route("/clear_chat", methods=["POST"])
+def clear_chat():
+    try:
+        memory.clear()
+        return jsonify({"message": "Chat history cleared successfully"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == "__main__":
     app.run(debug=True, port=5001)

@@ -35,6 +35,10 @@ h1 {
     justify-content: center;
     font-weight: bold;
     margin-right: 10px;
+    flex-shrink: 0;
+    font-size: 16px;
+    text-align: center;
+    overflow: hidden;
 }
 
 .user-message .message-avatar {
@@ -69,4 +73,23 @@ h1 {
     border-radius: 15px 15px 15px 0;
     padding: 10px 15px;
     display: inline-block;
+}
+
+.message-bubble ul {
+    margin: 0.5rem 0;
+    padding-left: 1.2rem;
+}
+
+.message-bubble li {
+    margin-bottom: 0.3rem;
+}
+
+.message-bubble strong {
+    font-weight: bold;
+    color: #2aa198;
+}
+
+.message-bubble em {
+    font-style: italic;
+    color: #6c71c4;
 }
