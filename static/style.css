@@ -42,15 +42,3 @@ h1 {
     padding: 10px 15px;
     display: inline-block;
 }
-
-.drop-zone {
-    border: 2px dashed #93a1a1;
-    border-radius: 5px;
-    padding: 20px;
-    text-align: center;
-    cursor: pointer;
-}
-
-.drop-zone.dragover {
-    background-color: #eee8d5;
-}
