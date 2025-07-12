@@ -28,6 +28,16 @@ EMBEDDING_MODEL = "sentence-transformers/all-mpnet-base-v2"
 # --- LLM Configuration ---
 llm_gemini_pro = ChatGoogleGenerativeAI(model="gemini-2.5-pro")
 llm_gemini_flash = ChatGoogleGenerativeAI(model="gemini-2.5-flash")
+llm_gemini_2_flash = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+llm_gemini_2_flash_lite = ChatGoogleGenerativeAI(model="gemini-2.0-flash-lite")
+
+# --- Fallback Chain ---
+llm_fallback_chain = [
+    llm_gemini_pro,
+    llm_gemini_flash,
+    llm_gemini_2_flash,
+    llm_gemini_2_flash_lite
+]
 
 # --- App Setup ---
 app = Flask(__name__)
@@ -84,17 +94,45 @@ def ask():
 
             # 3. Create a dedicated chain for this file.
             file_qa_chain = ConversationalRetrievalChain.from_llm(
-                llm=llm_gemini_pro,
+                llm=llm_fallback_chain[0], # Start with the primary model
                 retriever=file_retriever,
                 memory=file_memory,
                 return_source_documents=True
             )
             
-            # 4. Invoke the file-specific chain.
-            response = file_qa_chain.invoke({"question": user_message})
+            # 4. Invoke the file-specific chain with fallback logic.
+            response = None
+            for i, llm in enumerate(llm_fallback_chain):
+                try:
+                    print(f"Attempting to query with {llm.model}...")
+                    file_qa_chain.llm = llm
+                    response = file_qa_chain.invoke({"question": user_message})
+                    break # Success, exit the loop
+                except Exception as e:
+                    if "429" in str(e) and i < len(llm_fallback_chain) - 1:
+                        print(f"{llm.model} rate limit likely hit. Switching to next model.")
+                        continue
+                    else:
+                        raise e
+            if response is None:
+                 return jsonify({"error": "All models in the fallback chain failed."}), 500
         else:
-            # No file in context, use the main general-purpose chain.
-            response = qa_chain_gemini_pro.invoke({"question": user_message})
+            # No file in context, use the main general-purpose chain with fallback.
+            response = None
+            for i, llm in enumerate(llm_fallback_chain):
+                try:
+                    print(f"Attempting to query with {llm.model}...")
+                    qa_chain_gemini_pro.llm = llm
+                    response = qa_chain_gemini_pro.invoke({"question": user_message})
+                    break # Success, exit the loop
+                except Exception as e:
+                    if "429" in str(e) and i < len(llm_fallback_chain) - 1:
+                        print(f"{llm.model} rate limit likely hit. Switching to next model.")
+                        continue
+                    else:
+                        raise e
+            if response is None:
+                 return jsonify({"error": "All models in the fallback chain failed."}), 500
             
         return jsonify({"answer": response["answer"]})
 
@@ -136,7 +174,20 @@ def upload():
                     {"type": "image_url", "image_url": f"data:image/jpeg;base64,{image_data}"},
                 ]
             )
-            response = llm_gemini_pro.invoke([image_message])
+            response = None
+            for i, llm in enumerate(llm_fallback_chain):
+                try:
+                    print(f"Attempting to query with {llm.model}...")
+                    response = llm.invoke([image_message])
+                    break # Success, exit the loop
+                except Exception as e:
+                    if "429" in str(e) and i < len(llm_fallback_chain) - 1:
+                        print(f"{llm.model} rate limit likely hit. Switching to next model.")
+                        continue
+                    else:
+                        raise e
+            if response is None:
+                    return jsonify({"error": "All models in the fallback chain failed to process the image."}), 500
             text = str(response.content)
         else:
             return jsonify({"error": "Unsupported file type. Please upload a PDF or image file (PNG, JPG, JPEG)."}), 400
