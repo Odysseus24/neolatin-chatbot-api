@@ -1,9 +1,11 @@
 import os
 from flask import Flask, render_template, request, jsonify
-from langchain.memory import ConversationBufferMemory
-from langchain.chains import ConversationalRetrievalChain
-from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain.chains import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.messages import HumanMessage, AIMessage
+from langchain_chroma import Chroma
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_google_genai import ChatGoogleGenerativeAI
 from dotenv import load_dotenv
 
@@ -40,18 +42,34 @@ app = Flask(__name__)
 # --- RAG Setup ---
 embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
 vectorstore = Chroma(persist_directory=VECTOR_STORE_PATH, embedding_function=embeddings)
-memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
 
-# Create separate QA chains for each model
-qa_chains = []
+# Chat history storage (in-memory for this example)
+chat_history = []
+
+# Create prompt template for RAG with chat history
+system_prompt = (
+    "You are an assistant for question-answering tasks. "
+    "Use the following pieces of retrieved context to answer "
+    "the question. If you don't know the answer, say that you "
+    "don't know. Use three sentences maximum and keep the "
+    "answer concise."
+    "\n\n"
+    "{context}"
+)
+
+prompt = ChatPromptTemplate.from_messages([
+    ("system", system_prompt),
+    MessagesPlaceholder("chat_history"),
+    ("human", "{input}"),
+])
+
+# Create separate chains for each model
+rag_chains = []
 for llm in llm_fallback_chain:
-    chain = ConversationalRetrievalChain.from_llm(
-        llm=llm,
-        retriever=retriever,
-        memory=memory
-    )
-    qa_chains.append(chain)
+    question_answer_chain = create_stuff_documents_chain(llm, prompt)
+    rag_chain = create_retrieval_chain(retriever, question_answer_chain)
+    rag_chains.append(rag_chain)
 
 # --- Routes ---
 @app.route("/")
@@ -66,11 +84,21 @@ def ask():
 
     # Try each model in the fallback chain
     response = None
-    for i, (llm, qa_chain) in enumerate(zip(llm_fallback_chain, qa_chains)):
+    for i, (llm, rag_chain) in enumerate(zip(llm_fallback_chain, rag_chains)):
         try:
             print(f"Attempting to query with {llm.model}...")
-            response = qa_chain.invoke({"question": user_message})
+            response = rag_chain.invoke({
+                "input": user_message,
+                "chat_history": chat_history
+            })
             print(f"Success with {llm.model}")
+            
+            # Add to chat history
+            chat_history.extend([
+                HumanMessage(content=user_message),
+                AIMessage(content=response["answer"])
+            ])
+            
             break  # Success, exit the loop
         except Exception as e:
             print(f"{llm.model} failed: {e}")
@@ -94,7 +122,8 @@ def ask():
 @app.route("/clear_chat", methods=["POST"])
 def clear_chat():
     try:
-        memory.clear()
+        global chat_history
+        chat_history = []
         return jsonify({"message": "Chat history cleared successfully"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
