@@ -49,13 +49,22 @@ chat_history = []
 
 # Create prompt template for RAG with chat history
 system_prompt = (
-    "You are an assistant for question-answering tasks. "
-    "Use the following pieces of retrieved context to answer "
-    "the question. If you don't know the answer, say that you "
-    "don't know. Use three sentences maximum and keep the "
-    "answer concise."
+    "You are a knowledgeable assistant for question-answering tasks. "
+    "First, check if the retrieved context below contains relevant information "
+    "to answer the question. If the context is relevant and helpful, use it "
+    "as your primary source and start your response with 'According to my handbooks' "
+    "instead of phrases like 'Based on the provided context' or 'The context shows'. "
+    "If the context is not relevant or doesn't contain useful information "
+    "for the question, rely on your general knowledge to provide a helpful answer. "
+    "In this case, start with one of these phrases (choose randomly): "
+    "'There is no information about your question in my handbooks. Relying on my general knowledge, I can tell you that', "
+    "'There is no information about your question in my handbooks. From what I know generally', "
+    "'There is no information about your question in my handbooks. Drawing from my broader knowledge', "
+    "'There is no information about your question in my handbooks. Based on my general understanding', "
+    "'There is no information about your question in my handbooks. What I can share from my general knowledge is that'. "
+    "Keep your answer informative but concise."
     "\n\n"
-    "{context}"
+    "Retrieved context: {context}"
 )
 
 prompt = ChatPromptTemplate.from_messages([
