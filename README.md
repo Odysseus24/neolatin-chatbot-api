@@ -1,12 +1,12 @@
-# RAG API - A Renaissance-Inspired Chatbot for Neo-Latin Studies
+# RAG API - A Chatbot for Neo-Latin Studies
 
-This is a sophisticated RAG (Retrieval-Augmented Generation) chatbot designed for Neo-Latin studies. It features a comprehensive 4-model fallback system using Google Gemini models and an elegant Renaissance-inspired user interface reminiscent of classical scholarly manuscripts.
+This is a sophisticated RAG (Retrieval-Augmented Generation) chatbot designed for Neo-Latin studies. It features a comprehensive 4-model fallback system using Google Gemini models and a web-based user interface.
 
 ## ✨ Features
 
 - **Multi-Model Fallback System**: Automatically switches between 4 Google Gemini models (gemini-2.5-pro, gemini-2.5-flash, gemini-2.0-flash, gemini-2.0-flash-lite) for maximum reliability
 - **Intelligent Source Detection**: Clearly distinguishes between handbook-sourced answers ("According to my handbooks") and general knowledge responses
-- **Renaissance UI**: Beautiful classical interface inspired by scholarly engravings with ornate decorations and classical typography
+- **Web Interface**: Clean, functional interface for easy interaction
 - **Modern LangChain Architecture**: Uses the latest LangChain components without deprecated features
 - **Chat History**: Maintains conversation context across interactions
 - **Vector Store Integration**: ChromaDB with HuggingFace embeddings for semantic document retrieval
@@ -52,22 +52,17 @@ This is a sophisticated RAG (Retrieval-Augmented Generation) chatbot designed fo
    ```
    The chatbot will be available at `http://127.0.0.1:5001`.
 
-## 🏛️ Architecture
+## 🛠️ Architecture
 
 - **Backend**: Flask web server with modern LangChain retrieval chains
 - **LLM**: Google Gemini models with intelligent fallback logic
 - **Vector Store**: ChromaDB with sentence-transformers embeddings
-- **Frontend**: Renaissance-themed HTML/CSS/JavaScript interface
+- **Frontend**: Web-based HTML/CSS/JavaScript interface
 - **Document Processing**: PyPDF and PyMuPDF for PDF handling
 
 ## 🎨 Interface
 
-The user interface draws inspiration from classical Renaissance engravings and scholarly manuscripts, featuring:
-- Classical typography (Cinzel, Cormorant Garamond)
-- Ornate decorations and borders
-- Gold and brass color palette
-- Parchment-style textures
-- Latin terminology for scholarly authenticity
+The user interface provides a clean, functional web-based chat experience optimized for academic research and study.
 
 ## 📚 How It Works
 
