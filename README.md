@@ -19,10 +19,25 @@ This is a sophisticated RAG (Retrieval-Augmented Generation) chatbot designed fo
    ```
 
 2. **Set up environment variables:**
-   Create a `.env` file and add your Google API key:
+   
+   **⚠️ IMPORTANT: Never commit API keys to version control!**
+   
+   a. Copy the example environment file:
+   ```bash
+   cp .env.example .env
    ```
-   GOOGLE_API_KEY=your_google_api_key
+   
+   b. Get your Google Gemini API key:
+   - Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
+   - Create a new API key
+   - Copy the key
+   
+   c. Edit `.env` and replace `your_google_api_key_here` with your actual key:
    ```
+   GOOGLE_API_KEY=your_actual_api_key_here
+   ```
+   
+   **Note**: The `.env` file is automatically ignored by git and will not be committed.
 
 3. **Vectorize your PDFs:**
    Place your OCRed PDF handbooks in the `my_pdfs` directory. Then run:
@@ -63,3 +78,22 @@ The user interface draws inspiration from classical Renaissance engravings and s
    - If no relevant info → "There is no information about your question in my handbooks. [Various continuations]..."
 4. **Model Fallback**: Automatically tries alternative models if the primary one fails
 5. **Chat Memory**: Maintains conversation history for contextual responses
+
+## 🔒 Security Notes
+
+- **API Keys**: Never commit API keys to version control. Use the `.env.example` template.
+- **Public Deployment**: If deploying publicly, consider implementing:
+  - Rate limiting to prevent API abuse
+  - User authentication
+  - API key rotation
+  - Usage monitoring and alerts
+- **Cost Management**: Google Gemini API has usage-based pricing. Monitor your usage in the [Google Cloud Console](https://console.cloud.google.com/).
+
+## 🚀 Deployment Options
+
+For public deployment, consider these approaches:
+
+1. **Personal Use**: Keep API keys in environment variables on your server
+2. **Multi-User**: Implement user authentication and let users provide their own API keys
+3. **SaaS Model**: Use server-side API keys with usage limits and billing
+4. **Local-Only**: Distribute as a local application where users setup their own keys

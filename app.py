@@ -16,7 +16,12 @@ api_key = os.getenv("GOOGLE_API_KEY")
 if api_key:
     print(f"Using Google API Key: {api_key[:5]}...{api_key[-5:]}")
 else:
-    print("Google API Key not found.")
+    print("❌ Google API Key not found!")
+    print("Please ensure you have:")
+    print("1. Created a .env file (copy from .env.example)")
+    print("2. Added your Google API key to the .env file")
+    print("3. Get your API key from: https://aistudio.google.com/app/apikey")
+    exit(1)
 
 # --- Configuration ---
 VECTOR_STORE_PATH = "chroma_db"
